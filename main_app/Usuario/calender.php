@@ -129,6 +129,16 @@ if (isset($_SESSION['usuario'])){
         background: -moz-linear-gradient(top, #172565, #172565);
         background: linear-gradient(to bottom, #172565, #172565);
     }
+    .book-green {
+      background: green;
+      color: white;
+      padding: 2%;
+    }
+    .book-red {
+      background: red;
+      color: white;
+      padding: 2%;
+    }
   </style>
 </head>
 <body ng-app="myApp" ng-controller="Ctrl" class="ng-cloak">
@@ -149,7 +159,7 @@ if (isset($_SESSION['usuario'])){
 
 <div class="container" ng-show="active == 'showCalender'">
   <h2>{{currentmonthname}} {{currentyear}}</h2>
-  <p></p>            
+  <p hidden id="userid"><?php echo $_SESSION['usuario']['id'] ?></p>            
 
   <table class="table table-bordered">
     <thead>
@@ -164,11 +174,23 @@ if (isset($_SESSION['usuario'])){
       </tr>
     </thead>
     <tbody>
+      <tr ng-show="calender==undefined">
+        <td>Loading</td>
+      </tr>
       <tr ng-repeat="clanederrow in calender">
-        <td ng-repeat="r1 in clanederrow track by $index"  ng-click="selectdate(clanederrow[$index])">
-            <a href="">
+        <td ng-repeat="r1 in clanederrow track by $index">
+            <div ng-show=clanederrow[$index] == ''>
+              <div>
                 {{clanederrow[$index]}}
-            </a>
+              </div>
+              <button ng-show="$index==0" class="btn btn-danger"  disabled>
+                Unavaiable
+              </button>
+              <button ng-show="!($index==0)" class="btn" ng-class="calculat(clanederrow[$index], currentmonthname, currentyear)=='N/A' || calculat(clanederrow[$index], currentmonthname, currentyear)=='Booked'? 'btn-danger': 'btn-success'" 
+                  ng-disabled="calculat(clanederrow[$index], currentmonthname, currentyear) == 'Booked' || calculat(clanederrow[$index], currentmonthname, currentyear)=='N/A'" ng-click="selectdate(clanederrow[$index])">
+                {{calculat(clanederrow[$index], currentmonthname, currentyear)}}
+              </button>
+            </div>
         </td>
       </tr>
     </tbody>
@@ -187,7 +209,7 @@ if (isset($_SESSION['usuario'])){
     <div class="row">
         <div class="col-md-12">
             <form name="bookForm">
-                <div class="form-group">
+                <div class="form-group" ng-init="data.userid='<?php echo $_SESSION['usuario']['id'] ?>'">
                     <label for="sel1">Select Product:</label>
                     <select required class="form-control" id="sel1" ng-model="data.product">
                         <option value="">Select</option>
@@ -245,6 +267,8 @@ app.controller('Ctrl', function($scope, $http) {
     $scope.active = "showCalender"
     $scope.allmonthNames = [ "January", "February", "March", "April", "May", "June","July", "August", "September", "October", "November", "December" ];
     
+    $scope.userid= angular.element('#userid')[0].innerText
+
     $scope.changecalender = (month, year) => {
         $scope.calender = [
             ["", "", "", "", "", "", ""],
@@ -269,11 +293,16 @@ app.controller('Ctrl', function($scope, $http) {
         }
         
     }
+    
+    $http.post('./getallbookings.php', {userid : $scope.userid}).then(function (response) {
+      $scope.allbookeddates = response.data.data
+      $scope.changecalender($scope.currentmonth, $scope.currentyear)
+    })
 
     now = new Date()
     $scope.currentmonth =  now.getMonth()
     $scope.currentyear =  now.getFullYear()
-    $scope.changecalender($scope.currentmonth, $scope.currentyear)
+    
     console.log($scope.calender)
 
     $scope.pmonth = () => {
@@ -288,6 +317,8 @@ app.controller('Ctrl', function($scope, $http) {
     $scope.cmonth = () => {
         now = new Date()
         $scope.changecalender(now.getMonth(), now.getFullYear())
+        $scope.currentmonth =  now.getMonth()
+        $scope.currentyear =  now.getFullYear()
     }
     $scope.nmonth = () => {
         $scope.currentmonth = $scope.currentmonth + 1
@@ -314,12 +345,32 @@ app.controller('Ctrl', function($scope, $http) {
             alert("Select All Fields.")
             return
         }
-        $scope.data.date = new Date(`${$scope.currentmonthname}/${$scope.selecteddate}/${$scope.currentyear}`)
+        // $scope.data.date = new Date(`${$scope.currentmonthname}/${$scope.selecteddate}/${$scope.currentyear}`)
+        $scope.data.date = `${$scope.currentyear}/${$scope.allmonthNames.indexOf($scope.currentmonthname)+1}/${$scope.selecteddate}`
         console.log($scope.data, $http)
         $http.post('./onfirmbooking.php', $scope.data).then(function (response) {
         $event.target.disabled=false
           alert("inserted")
+          $scope.allbookeddates.push($scope.data.date)
         })
+    }
+
+    $scope.calculat = (date, month, year) => {
+      // if (date==2){debugger}
+      for (eachbooked of $scope.allbookeddates){
+        d1 = new Date(`${year}/${$scope.allmonthNames.indexOf(month)+1}/${date}`)
+        d2 = new Date(eachbooked)
+        if ( d1.getDate() == d2.getDate() && d1.getMonth() == d2.getMonth() && d1.getFullYear() == d2.getFullYear() ) {
+          return "Booked"
+        }
+      }
+      dd = new Date(`${date}/${month}/${year}`)
+      if ((new Date().getTime() + 1000*60*60*24*14 ) < dd.getTime() ){
+        return "Book"
+      }
+      else {
+        return "N/A"
+      }
     }
 
 
