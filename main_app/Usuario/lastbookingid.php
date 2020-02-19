@@ -8,7 +8,7 @@ $postdata = file_get_contents("php://input");
 $request = json_decode($postdata);
 
 
-$sql = "SELECT bookid,count(bookid) FROM dbhamsecon.booking where userid= '$request->userid' group by bookid" ;
+$sql = "SELECT bookrowid, id, date FROM dbhamsecon.booking where userid='$request->userid' and status='confirmed'  order by id desc limit 1" ;
 $result = $mysqli -> query($sql);
 if($result->num_rows == 0){
     echo json_encode(array('data'=>[]));

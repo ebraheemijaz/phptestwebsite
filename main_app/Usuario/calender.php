@@ -146,13 +146,13 @@ if (isset($_SESSION['usuario'])){
 <div class="row" ng-show="active == 'showCalender'">
   <div class="col-md-3"></div>
   <div class="col-md-2">
-    <a class="button" ng-click="pmonth()">Previous Month</a>
+    <button class="button" ng-disabled="calender==undefined" ng-click="pmonth()">Previous Month</button>
   </div>
   <div class="col-md-2">
-    <a class="button" ng-click="cmonth()">Current Month</a>
+    <button class="button" ng-disabled="calender==undefined" ng-click="cmonth()">Current Month</button>
   </div>
   <div class="col-md-2">
-    <a class="button" ng-click="nmonth()">Next Month</a>
+    <button class="button" ng-disabled="calender==undefined" ng-click="nmonth()">Next Month</button>
   </div>
   <div class="col-md-3"></div>
 </div>
@@ -171,13 +171,14 @@ if (isset($_SESSION['usuario'])){
         <th>Thursday</th>
         <th>Friday</th>
         <th>Saturday</th>
+        <th>Action</th>
       </tr>
     </thead>
     <tbody>
       <tr ng-show="calender==undefined">
         <td>Loading</td>
       </tr>
-      <tr ng-repeat="clanederrow in calender">
+      <tr ng-repeat="clanederrow in calender" id="{{rowid}}" ng-init="rowid=calculateid(clanederrow)">
         <td ng-repeat="r1 in clanederrow track by $index">
             <div ng-show=clanederrow[$index] == ''>
               <div>
@@ -186,11 +187,31 @@ if (isset($_SESSION['usuario'])){
               <button ng-show="$index==0" class="btn btn-danger"  disabled>
                 Unavaiable
               </button>
-              <button ng-show="!($index==0)" class="btn" ng-class="calculat(clanederrow[$index], currentmonthname, currentyear)=='N/A' || calculat(clanederrow[$index], currentmonthname, currentyear)=='Booked'? 'btn-danger': 'btn-success'" 
-                  ng-disabled="calculat(clanederrow[$index], currentmonthname, currentyear) == 'Booked' || calculat(clanederrow[$index], currentmonthname, currentyear)=='N/A'" ng-click="selectdate(clanederrow[$index])">
-                {{calculat(clanederrow[$index], currentmonthname, currentyear)}}
+              <button ng-show="rowid!=activerowid && $index!=0" class="btn btn-danger" disabled>
+                  N/A
               </button>
+              <button ng-show="rowid==activerowid && $index!=0" class="btn btn-success" ng-click="selectdate(clanederrow[$index], rowid)">
+                  <span>
+                    {{bookingcount(clanederrow[$index]+""+currentmonthname+""+currentyear)}}
+                  </span>
+                  Book
+              </button>
+              <!-- <button ng-show="!($index==0)" class="btn" ng-class="calculat(clanederrow[$index], currentmonthname, currentyear)=='N/A' || calculat(clanederrow[$index], currentmonthname, currentyear)=='Booked'? 'btn-danger': 'btn-success'" 
+                  ng-disabled="calculat(clanederrow[$index], currentmonthname, currentyear) == 'Booked' || calculat(clanederrow[$index], currentmonthname, currentyear)=='N/A'" ng-click="selectdate(clanederrow[$index])">
+                <span id="{{clanederrow[$index]}}{{currentmonthname}}{{currentyear}}">
+                  {{bookingcount(clanederrow[$index]+""+currentmonthname+""+currentyear)}}
+                </span>
+                <span>
+                  {{calculat(clanederrow[$index], currentmonthname, currentyear)}}
+                </span>
+              </button> -->
             </div>
+        </td>
+        <td>
+            <button ng-show="rowid==activerowid" class="btn btn-success"  
+                  ng-disabled="" ng-click="showallweekbooking(rowid)">
+                Confirm
+            </button>
         </td>
       </tr>
     </tbody>
@@ -259,15 +280,88 @@ if (isset($_SESSION['usuario'])){
     </div>
 </div>
 
+<div id="myModal" class="modal fade" role="dialog">
+  <div class="modal-dialog modal-lg">
+
+    <!-- Modal content-->
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title">Confirm Booking</h4>
+      </div>
+      <div class="modal-body">
+      <table class="table table-striped">
+        <thead>
+          <tr>
+            <th>Product</th>
+            <th>Capacity</th>
+            <th>Turn</th>
+            <th>date</th>
+            <th>Delete</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr ng-show="allweeklybookings==undefined">
+            <td>Loading...</td>
+          </tr>
+          <tr ng-repeat="eachwbook in allweeklybookings" ng-show="allweeklybookings!=undefined">
+            <td>{{eachwbook[0]}}</td>
+            <td>{{eachwbook[1]}}</td>
+            <td>{{eachwbook[2]}}</td>
+            <td>{{eachwbook[3]}}</td>
+            <td>
+              <button ng-click="deletebooking(eachwbook[4], $event)" class="btn btn-danger">
+                delete
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      </div>
+      <div class="modal-footer">
+          <button ng-click="sendbooking($event)" class="button float-right" ng-show="allweeklybookings!=undefined">
+                            Send
+          </button>
+      </div>
+    </div>
+
+  </div>
+</div>
 
 <script>
 var app = angular.module('myApp', []);
 app.controller('Ctrl', function($scope, $http) {
+    $scope.userid= angular.element('#userid')[0].innerText
     $scope.data = {}
     $scope.active = "showCalender"
     $scope.allmonthNames = [ "January", "February", "March", "April", "May", "June","July", "August", "September", "October", "November", "December" ];
     
-    $scope.userid= angular.element('#userid')[0].innerText
+    $http.post('./lastbookingid.php', {userid : $scope.userid}).then(function (response) {
+      let now = new Date()
+      let nextweekdate=new Date(now.getTime() + 1000*60*60*24*14 )
+      let nextweekstart = new Date(new Date(nextweekdate.getFullYear()+"/"+(nextweekdate.getMonth()+1)+"/"+nextweekdate.getDate()) - nextweekdate.getDay()*1000*60*60*24)
+      let nextweekend = new Date(new Date(new Date(nextweekdate.getFullYear()+"/"+(nextweekdate.getMonth()+1)+"/"+nextweekdate.getDate()) - nextweekdate.getDay()*1000*60*60*24).getTime() + 1000*60*60*24*6)
+      $scope.activerowid = nextweekstart.getDate()+""+$scope.allmonthNames[nextweekstart.getMonth()]+""+nextweekstart.getFullYear()
+      if (response.data.data.length != 0){
+        while ( nextweekstart.getTime() < new Date(response.data.data[0][2]).getTime()  ){
+          console.log("stepup")
+          nextweekstart = new Date(nextweekstart.getTime() + 1000*60*60*24*7)
+          nextweekend = new Date(nextweekend.getTime() + 1000*60*60*24*7)
+          if (nextweekstart.getMonth() != nextweekend.getMonth()){
+            // debugger
+            let dday = nextweekstart
+            while(dday.getMonth() == nextweekstart.getMonth()){
+              dday = new Date(dday.getTime() + 1000*60*60*24)
+            }
+            nextweekend = dday
+            nextweekstart = nextweekend
+            // alert("month break")
+          }
+
+        }
+        $scope.activerowid = nextweekstart.getDate()+""+$scope.allmonthNames[nextweekstart.getMonth()]+""+nextweekstart.getFullYear()
+      }
+    })
 
     $scope.changecalender = (month, year) => {
         $scope.calender = [
@@ -295,7 +389,10 @@ app.controller('Ctrl', function($scope, $http) {
     }
     
     $http.post('./getallbookings.php', {userid : $scope.userid}).then(function (response) {
-      $scope.allbookeddates = response.data.data
+      $scope.allbookeddates = {}
+      for (each of response.data.data){
+        $scope.allbookeddates[each[0]] = each[1]
+      }
       $scope.changecalender($scope.currentmonth, $scope.currentyear)
     })
 
@@ -334,8 +431,10 @@ app.controller('Ctrl', function($scope, $http) {
         $scope.active = name
     }
 
-    $scope.selectdate = (date) => {
+    $scope.selectdate = (date, bookrowid) => {
         $scope.selecteddate = date
+        $scope.data.bookid = date + $scope.currentmonthname + $scope.currentyear
+        $scope.data.bookrowid = bookrowid
         $scope.selectactive("bookform")
     }
 
@@ -343,6 +442,7 @@ app.controller('Ctrl', function($scope, $http) {
       $event.target.disabled=true
         if ($scope.bookForm.$invalid){
             alert("Select All Fields.")
+            $event.target.disabled=false
             return
         }
         // $scope.data.date = new Date(`${$scope.currentmonthname}/${$scope.selecteddate}/${$scope.currentyear}`)
@@ -350,29 +450,69 @@ app.controller('Ctrl', function($scope, $http) {
         console.log($scope.data, $http)
         $http.post('./onfirmbooking.php', $scope.data).then(function (response) {
         $event.target.disabled=false
+          location.reload();
           alert("inserted")
-          $scope.allbookeddates.push($scope.data.date)
+          // $scope.allbookeddates.push($scope.data.date)
         })
     }
 
     $scope.calculat = (date, month, year) => {
-      // if (date==2){debugger}
-      for (eachbooked of $scope.allbookeddates){
-        d1 = new Date(`${year}/${$scope.allmonthNames.indexOf(month)+1}/${date}`)
-        d2 = new Date(eachbooked)
-        if ( d1.getDate() == d2.getDate() && d1.getMonth() == d2.getMonth() && d1.getFullYear() == d2.getFullYear() ) {
-          return "Booked"
-        }
-      }
-      dd = new Date(`${date}/${month}/${year}`)
-      if ((new Date().getTime() + 1000*60*60*24*14 ) < dd.getTime() ){
+      let calenderdate = new Date(`${date}/${month}/${year}`)
+      let now = new Date()
+      let nextweekdate=new Date(now.getTime() + 1000*60*60*24*14 )
+      let nextweekstart = new Date(new Date(nextweekdate.getFullYear()+"/"+(nextweekdate.getMonth()+1)+"/"+nextweekdate.getDate()) - nextweekdate.getDay()*1000*60*60*24)
+      let nextweekend = new Date(new Date(new Date(nextweekdate.getFullYear()+"/"+(nextweekdate.getMonth()+1)+"/"+nextweekdate.getDate()) - nextweekdate.getDay()*1000*60*60*24).getTime() + 1000*60*60*24*6)
+      if ( calenderdate.getTime() >= nextweekstart.getTime() && calenderdate.getTime() <= nextweekend.getTime() ){
         return "Book"
       }
       else {
         return "N/A"
       }
+      // for (eachbooked of $scope.allbookeddates){
+      //   d1 = new Date(`${year}/${$scope.allmonthNames.indexOf(month)+1}/${date}`)
+      //   d2 = new Date(eachbooked)
+      //   if ( d1.getDate() == d2.getDate() && d1.getMonth() == d2.getMonth() && d1.getFullYear() == d2.getFullYear() ) {
+      //     return "Booked"
+      //   }
+      // }
+      // dd = new Date(`${date}/${month}/${year}`)
     }
 
+    $scope.bookingcount = (id) => {
+      return $scope.allbookeddates[id] == undefined ? 0 : $scope.allbookeddates[id]
+    }
+
+    $scope.calculateid = (row) => {
+      for (let eachitem of row){
+        if (eachitem != '') {
+          return ""+eachitem+""+$scope.currentmonthname+""+$scope.currentyear
+        }
+      }
+    }
+
+    $scope.showallweekbooking = (id) => {
+      $("#myModal").modal()
+      $http.post('./getweeklybookings.php', {userid : $scope.userid, bookid: id}).then(function (response) {
+        $scope.allweeklybookings = response.data.data
+      })
+    }
+    $scope.deletebooking = (id, $event) => {
+      $event.target.disabled=true
+      $event.target.innerText = "deleting"
+      $http.post('./deletebooking.php', {id: id}).then(function (response) {
+        alert("deleted")
+        location.reload();
+      })
+    }
+    $scope.sendbooking = ($event) => {
+      $event.target.disabled=true
+      $event.target.innerText = "Processing..."
+      $http.post('./sendbooking.php', {bookrowid: $scope.activerowid}).then(function (response) {
+        alert("Confirmed")
+        location.reload();
+      })
+    }
+    
 
 });
 </script>

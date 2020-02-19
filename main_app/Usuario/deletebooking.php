@@ -8,7 +8,7 @@ $postdata = file_get_contents("php://input");
 $request = json_decode($postdata);
 
 
-$sql = "SELECT bookid,count(bookid) FROM dbhamsecon.booking where userid= '$request->userid' group by bookid" ;
+$sql = "Delete FROM dbhamsecon.booking where id= '$request->id'" ;
 $result = $mysqli -> query($sql);
 if($result->num_rows == 0){
     echo json_encode(array('data'=>[]));
