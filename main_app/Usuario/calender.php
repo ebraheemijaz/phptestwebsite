@@ -354,7 +354,7 @@ app.controller('Ctrl', function($scope, $http) {
                 dday = new Date(dday.getTime() + 1000*60*60*24)
               }
               nextweekend = dday
-              nextweekstart = nextweekend
+              // nextweekstart = nextweekend
             }
 
           }
