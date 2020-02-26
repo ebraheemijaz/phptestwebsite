@@ -492,7 +492,7 @@ app.controller('Ctrl', function($scope, $http) {
 
     $scope.showallweekbooking = (id) => {
       $("#myModal").modal()
-      $http.post('./getweeklybookings.php', {userid : $scope.userid, bookid: id}).then(function (response) {
+      $http.post('./getweeklybookings.php', {userid : $scope.userid, bookrowid: id}).then(function (response) {
         $scope.allweeklybookings = response.data.data
       })
     }
