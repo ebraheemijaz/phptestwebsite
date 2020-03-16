@@ -343,23 +343,23 @@ app.controller('Ctrl', function($scope, $http) {
       let nextweekend = new Date(new Date(new Date(nextweekdate.getFullYear()+"/"+(nextweekdate.getMonth()+1)+"/"+nextweekdate.getDate()) - nextweekdate.getDay()*1000*60*60*24).getTime() + 1000*60*60*24*6)
       $scope.activerowid = nextweekstart.getDate()+""+$scope.allmonthNames[nextweekstart.getMonth()]+""+nextweekstart.getFullYear()
       if (response.data.data.length != 0){
-        while ( nextweekstart.getTime() < new Date(response.data.data[0][2]).getTime()  ){
-          console.log("stepup")
-          nextweekstart = new Date(nextweekstart.getTime() + 1000*60*60*24*7)
-          nextweekend = new Date(nextweekend.getTime() + 1000*60*60*24*7)
-          if (nextweekstart.getMonth() != nextweekend.getMonth()){
-            // debugger
-            let dday = nextweekstart
-            while(dday.getMonth() == nextweekstart.getMonth()){
-              dday = new Date(dday.getTime() + 1000*60*60*24)
+        if(nextweekstart.getTime() < new Date(response.data.data[0][2]).getTime()){
+          while ( nextweekstart.getTime() < new Date(response.data.data[0][2]).getTime()  ){
+            console.log("stepup")
+            nextweekstart = new Date(nextweekstart.getTime() + 1000*60*60*24*7)
+            nextweekend = new Date(nextweekend.getTime() + 1000*60*60*24*7)
+            if (nextweekstart.getMonth() != nextweekend.getMonth()){
+              let dday = nextweekstart
+              while(dday.getMonth() == nextweekstart.getMonth()){
+                dday = new Date(dday.getTime() + 1000*60*60*24)
+              }
+              nextweekend = dday
+              nextweekstart = nextweekend
             }
-            nextweekend = dday
-            nextweekstart = nextweekend
-            // alert("month break")
-          }
 
+          }
+          $scope.activerowid = nextweekstart.getDate()+""+$scope.allmonthNames[nextweekstart.getMonth()]+""+nextweekstart.getFullYear()
         }
-        $scope.activerowid = nextweekstart.getDate()+""+$scope.allmonthNames[nextweekstart.getMonth()]+""+nextweekstart.getFullYear()
       }
     })
 
