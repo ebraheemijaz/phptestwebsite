@@ -341,6 +341,8 @@ app.controller('Ctrl', function($scope, $http) {
       let nextweekdate=new Date(now.getTime() + 1000*60*60*24*14 )
       let nextweekstart = new Date(new Date(nextweekdate.getFullYear()+"/"+(nextweekdate.getMonth()+1)+"/"+nextweekdate.getDate()) - nextweekdate.getDay()*1000*60*60*24)
       let nextweekend = new Date(new Date(new Date(nextweekdate.getFullYear()+"/"+(nextweekdate.getMonth()+1)+"/"+nextweekdate.getDate()) - nextweekdate.getDay()*1000*60*60*24).getTime() + 1000*60*60*24*6)
+      console.log(nextweekstart)
+      console.log(nextweekend)
       $scope.activerowid = nextweekstart.getDate()+""+$scope.allmonthNames[nextweekstart.getMonth()]+""+nextweekstart.getFullYear()
       if (response.data.data.length != 0){
         if(nextweekstart.getTime() < new Date(response.data.data[0][2]).getTime()){
